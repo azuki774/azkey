@@ -486,7 +486,7 @@ export default function (props: MfmProps, { emit }: { emit: SetupContext<MfmEven
 			}
 
 			case 'unicodeEmoji': {
-				if (isNote && isEmojiOnlyNote(rootAst) && rootAst.filter(n => n.type === 'emojiCode').length <= 5) {
+				if (isNote && isEmojiOnlyNote(rootAst) && rootAst.filter(n => n.type === 'unicodeEmoji').length <= 5) {
 					return [h('span', {
 						class: prefer.s.advancedMfm ? 'mfm-x3' : '',
 					}, [h(MkEmoji, {
