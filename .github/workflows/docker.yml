@@ -3,7 +3,6 @@ name: Publish Docker image
 on:
   push:
     tags:
-      - v*
   workflow_dispatch:
 
 env:
