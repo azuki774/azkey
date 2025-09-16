@@ -1,6 +1,6 @@
-This repository was forked from misskey-dev/misskey.
+This repository is a fork of [misskey-dev/misskey](https://github.com/misskey-dev/misskey).
 
-This forked misskey is running in https://azkey.azuki.blue/
+This fork is running at <https://azkey.azuki.blue/>
 
 ---
 
