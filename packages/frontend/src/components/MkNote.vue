@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	v-if="!hardMuted && muted === false"
 	ref="rootEl"
 	v-hotkey="keymap"
-	:class="[$style.root, { [$style.showActionsOnlyHover]: prefer.s.showNoteActionsOnlyHover, [$style.skipRender]: prefer.s.skipNoteRender }]"
+	:class="[$style.root, { [$style.showActionsOnlyHover]: prefer.s.showNoteActionsOnlyHover, [$style.skipRender]: prefer.s.skipNoteRender, [$style.compact]: noteSpacing === 'extremelyNarrow' }]"
 	tabindex="0"
 >
 	<MkNoteSub v-if="appearNote.replyId && !renoteCollapsed" :note="appearNote?.reply ?? null" :class="$style.replyTo"/>
@@ -84,7 +84,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</div>
 						</div>
 					</div>
-					<div v-if="appearNote.files && appearNote.files.length > 0" style="margin-top: 8px;">
+					<div v-if="appearNote.files && appearNote.files.length > 0" :class="$style.mediaList">
 						<MkMediaList ref="galleryEl" :mediaList="appearNote.files"/>
 					</div>
 					<MkPoll
@@ -112,7 +112,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 			<MkReactionsViewer
 				v-if="appearNote.reactionAcceptance !== 'likeOnly'"
-				style="margin-top: 6px;"
+				:class="$style.reactionsViewer"
 				:reactions="$appearNote.reactions"
 				:reactionEmojis="$appearNote.reactionEmojis"
 				:myReaction="$appearNote.myReaction"
@@ -314,6 +314,8 @@ const renoteCollapsed = ref(
 		($appearNote.myReaction != null)
 	),
 );
+
+const noteSpacing = computed(() => prefer.s.noteSpacing);
 
 const pleaseLoginContext = computed<OpenOnRemoteOptions>(() => ({
 	type: 'lookup',
@@ -777,6 +779,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .tip + .article {
 	padding-top: 8px;
+
+	.root.compact & {
+		padding-top: 4px;
+	}
 }
 
 .replyTo {
@@ -793,8 +799,16 @@ function emitUpdReaction(emoji: string, delta: number) {
 	white-space: pre;
 	color: var(--MI_THEME-renote);
 
+	.root.compact & {
+		padding: 4px 8px 2px 8px;
+	}
+
 	& + .article {
 		padding-top: 8px;
+
+		.root.compact & {
+			padding-top: 4px;
+		}
 	}
 
 	> .colorBar {
@@ -808,6 +822,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 	width: 28px;
 	height: 28px;
 	margin: 0 8px 0 0;
+
+	.root.compact & {
+		margin: 0 4px 0 0;
+	}
 }
 
 .renoteText {
@@ -841,6 +859,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 	line-height: 28px;
 	white-space: pre;
 	padding: 0 32px 18px;
+
+	.root.compact & {
+		padding: 0 16px 8px;
+	}
 }
 
 .collapsedRenoteTargetAvatar {
@@ -869,6 +891,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 	position: relative;
 	display: flex;
 	padding: 28px 32px;
+
+	.root.compact & {
+		padding: 7px 8px;
+	}
 }
 
 .colorBar {
@@ -972,6 +998,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .urlPreview {
 	margin-top: 8px;
+
+	.root.compact & {
+		margin-top: 3px;
+	}
 }
 
 .poll {
@@ -980,6 +1010,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .quote {
 	padding: 8px 0;
+
+	.root.compact & {
+		padding: 4px 0;
+	}
 }
 
 .quoteNote {
@@ -996,12 +1030,20 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 .footer {
 	margin-bottom: -14px;
+
+	.root.compact & {
+		margin-bottom: -20px;
+	}
 }
 
 .footerButton {
 	margin: 0;
 	padding: 8px;
 	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%); // opacityなど不透明度で表現するとレンダリングパフォーマンスに影響するので通常の色の混合で代用
+
+	.root.compact & {
+		padding: 4px;
+	}
 
 	&:not(:last-child) {
 		margin-right: 28px;
@@ -1024,10 +1066,18 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 	.renote {
 		padding: 12px 26px 0 26px;
+
+		.root.compact & {
+			padding: 6px 13px 0 13px;
+		}
 	}
 
 	.article {
 		padding: 24px 26px;
+
+		.root.compact & {
+			padding: 12px 13px;
+		}
 	}
 
 	.avatar {
@@ -1043,10 +1093,18 @@ function emitUpdReaction(emoji: string, delta: number) {
 
 	.renote {
 		padding: 10px 22px 0 22px;
+
+		.root.compact & {
+			padding: 5px 11px 0 11px;
+		}
 	}
 
 	.article {
 		padding: 20px 22px;
+
+		.root.compact & {
+			padding: 10px 11px;
+		}
 	}
 
 	.footer {
@@ -1057,6 +1115,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 @container (max-width: 480px) {
 	.renote {
 		padding: 8px 16px 0 16px;
+
+		.root.compact & {
+			padding: 4px 8px 0 8px;
+		}
 	}
 
 	.tip {
@@ -1066,10 +1128,19 @@ function emitUpdReaction(emoji: string, delta: number) {
 	.collapsedRenoteTarget {
 		padding: 0 16px 9px;
 		margin-top: 4px;
+
+		.root.compact & {
+			padding: 0 8px 4px;
+			margin-top: 2px;
+		}
 	}
 
 	.article {
 		padding: 14px 16px;
+
+		.root.compact & {
+			padding: 7px 8px;
+		}
 	}
 }
 
@@ -1078,6 +1149,10 @@ function emitUpdReaction(emoji: string, delta: number) {
 		margin: 0 10px 0 0;
 		width: 46px;
 		height: 46px;
+
+		.root.compact & {
+			margin: 0 8px 0 0;
+		}
 
 		&.useSticky {
 			top: calc(14px + var(--MI-stickyTop, 0px));
@@ -1144,5 +1219,21 @@ function emitUpdReaction(emoji: string, delta: number) {
 	margin-left: 8px;
 	opacity: .8;
 	font-size: 95%;
+}
+
+.mediaList {
+	margin-top: 8px;
+
+	.root.compact & {
+		margin-top: 3px;
+	}
+}
+
+.reactionsViewer {
+	margin-top: 6px;
+
+	.root.compact & {
+		margin-top: 2px;
+	}
 }
 </style>
