@@ -475,10 +475,10 @@ defineExpose({
 
 // Note spacing modes
 .notes.spacing_extremelyNarrow .note:not(:last-child) {
-	padding-bottom: 3px;
+	padding-bottom: 1px;
 
 	@media (max-width: 500px) {
-		padding-bottom: 2px;
+		padding-bottom: 1px;
 	}
 }
 
@@ -589,6 +589,10 @@ defineExpose({
 	padding: 8px 8px;
 	margin: 0 auto;
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
+
+	.notes.spacing_extremelyNarrow & {
+		padding: 2px 8px;
+	}
 }
 
 .ad {
@@ -596,6 +600,10 @@ defineExpose({
 	background-size: auto auto;
 	background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, var(--MI_THEME-bg) 8px, var(--MI_THEME-bg) 14px);
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
+
+	.notes.spacing_extremelyNarrow & {
+		padding: 2px;
+	}
 
 	&:empty {
 		display: none;
