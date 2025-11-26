@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<component
 			:is="prefer.s.animation ? TransitionGroup : 'div'"
-			:class="$style.notes"
+			:class="[$style.notes, $style[noteSpacingClass]]"
 			:enterActiveClass="$style.transition_x_enterActive"
 			:leaveActiveClass="$style.transition_x_leaveActive"
 			:enterFromClass="$style.transition_x_enterFrom"
@@ -56,7 +56,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, watch, onUnmounted, provide, useTemplateRef, TransitionGroup, onMounted, shallowRef, ref, markRaw } from 'vue';
+import { computed, watch, onUnmounted, provide, useTemplateRef, TransitionGroup, onMounted, shallowRef, ref, markRaw, useCssModule } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@@/js/use-interval.js';
 import { useDocumentVisibility } from '@@/js/use-document-visibility.js';
@@ -77,6 +77,14 @@ import { i18n } from '@/i18n.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { Paginator } from '@/utility/paginator.js';
+
+const $style = useCssModule();
+
+const noteSpacing = computed(() => prefer.s.noteSpacing);
+
+const noteSpacingClass = computed(() => {
+	return `spacing_${noteSpacing.value}`;
+});
 
 const props = withDefaults(defineProps<{
 	src: BasicTimelineType | 'mentions' | 'directs' | 'list' | 'antenna' | 'channel' | 'role';
@@ -465,6 +473,39 @@ defineExpose({
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
 }
 
+// Note spacing modes
+.notes.spacing_extremelyNarrow .note:not(:last-child) {
+	padding-bottom: 1px;
+
+	@media (max-width: 500px) {
+		padding-bottom: 1px;
+	}
+}
+
+.notes.spacing_narrow .note:not(:last-child) {
+	padding-bottom: 6px;
+
+	@media (max-width: 500px) {
+		padding-bottom: 4px;
+	}
+}
+
+.notes.spacing_normal .note:not(:last-child) {
+	padding-bottom: 16px;
+
+	@media (max-width: 500px) {
+		padding-bottom: 10px;
+	}
+}
+
+.notes.spacing_wide .note:not(:last-child) {
+	padding-bottom: 28px;
+
+	@media (max-width: 500px) {
+		padding-bottom: 18px;
+	}
+}
+
 .new {
 	--gapFill: 0.5px; // 上位ヘッダーの高さにフォントの関係などで少数が含まれると、レンダリングエンジンによっては隙間が表示されてしまうため、隙間を隠すために少しずらす
 
@@ -548,6 +589,10 @@ defineExpose({
 	padding: 8px 8px;
 	margin: 0 auto;
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
+
+	.notes.spacing_extremelyNarrow & {
+		padding: 2px 8px;
+	}
 }
 
 .ad {
@@ -555,6 +600,10 @@ defineExpose({
 	background-size: auto auto;
 	background-image: repeating-linear-gradient(45deg, transparent, transparent 8px, var(--MI_THEME-bg) 8px, var(--MI_THEME-bg) 14px);
 	border-bottom: solid 0.5px var(--MI_THEME-divider);
+
+	.notes.spacing_extremelyNarrow & {
+		padding: 2px;
+	}
 
 	&:empty {
 		display: none;
