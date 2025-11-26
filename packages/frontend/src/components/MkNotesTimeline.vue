@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup generic="T extends IPaginator<Misskey.entities.Note>">
-import { computed } from 'vue';
+import { computed, useCssModule } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { IPaginator } from '@/utility/paginator.js';
 import MkNote from '@/components/MkNote.vue';
@@ -48,6 +48,8 @@ import { i18n } from '@/i18n.js';
 import { globalEvents, useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { prefer } from '@/preferences.js';
+
+const $style = useCssModule();
 
 const props = withDefaults(defineProps<{
 	paginator: T;
