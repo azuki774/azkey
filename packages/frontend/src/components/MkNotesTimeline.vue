@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkPagination :paginator="paginator" :direction="direction" :autoLoad="autoLoad" :pullToRefresh="pullToRefresh" :withControl="withControl">
+<MkPagination :paginator="paginator" :direction="direction" :autoLoad="autoLoad" :pullToRefresh="pullToRefresh" :withControl="withControl" :forceDisableInfiniteScroll="forceDisableInfiniteScroll">
 	<template #empty><MkResult type="empty" :text="i18n.ts.noNotes"/></template>
 
 	<template #default="{ items: notes }">
@@ -41,29 +41,26 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup generic="T extends IPaginator<Misskey.entities.Note>">
 import { computed, useCssModule } from 'vue';
 import * as Misskey from 'misskey-js';
+import type { MkPaginationOptions } from '@/components/MkPagination.vue';
 import type { IPaginator } from '@/utility/paginator.js';
 import MkNote from '@/components/MkNote.vue';
 import MkPagination from '@/components/MkPagination.vue';
 import { i18n } from '@/i18n.js';
-import { globalEvents, useGlobalEvent } from '@/events.js';
+import { useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { prefer } from '@/preferences.js';
 
 const $style = useCssModule();
 
-const props = withDefaults(defineProps<{
+const props = withDefaults(defineProps<MkPaginationOptions & {
 	paginator: T;
 	noGap?: boolean;
-
-	direction?: 'up' | 'down' | 'both';
-	autoLoad?: boolean;
-	pullToRefresh?: boolean;
-	withControl?: boolean;
 }>(), {
 	autoLoad: true,
 	direction: 'down',
 	pullToRefresh: true,
 	withControl: true,
+	forceDisableInfiniteScroll: false,
 });
 
 const noteSpacing = computed(() => prefer.s.noteSpacing);
