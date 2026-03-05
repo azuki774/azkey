@@ -177,12 +177,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 							<SearchMarker :keywords="['note', 'spacing', 'gap', 'margin', 'narrow', '間隔', '狭い']">
 								<MkPreferenceContainer k="noteSpacing">
-									<MkRadios v-model="noteSpacing">
+									<MkRadios
+										v-model="noteSpacing"
+										:options="[
+											{ value: 'extremelyNarrow', label: i18n.ts._noteSpacing.extremelyNarrow },
+											{ value: 'narrow', label: i18n.ts._noteSpacing.narrow },
+											{ value: 'normal', label: i18n.ts._noteSpacing.normal },
+											{ value: 'wide', label: i18n.ts._noteSpacing.wide },
+										]"
+									>
 										<template #label><SearchLabel>{{ i18n.ts.noteSpacing }}</SearchLabel></template>
-										<option value="extremelyNarrow">{{ i18n.ts._noteSpacing.extremelyNarrow }}</option>
-										<option value="narrow">{{ i18n.ts._noteSpacing.narrow }}</option>
-										<option value="normal">{{ i18n.ts._noteSpacing.normal }}</option>
-										<option value="wide">{{ i18n.ts._noteSpacing.wide }}</option>
 									</MkRadios>
 								</MkPreferenceContainer>
 							</SearchMarker>
