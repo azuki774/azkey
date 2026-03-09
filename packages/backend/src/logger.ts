@@ -9,6 +9,7 @@ import { default as convertColor } from 'color-convert';
 import { format as dateFormat } from 'date-fns';
 import { bindThis } from '@/decorators.js';
 import { envOption } from './env.js';
+import { getCurrentTraceId } from '@/tracing/TraceContext.js';
 import type { KEYWORD } from 'color-convert/conversions.js';
 
 type Context = {
@@ -56,6 +57,7 @@ export default class Logger {
 			level === 'info' ? chalk.blue('INFO') :
 			null;
 		const contexts = [this.context].concat(subContexts).map(d => d.color ? chalk.rgb(...convertColor.keyword.rgb(d.color))(d.name) : chalk.white(d.name));
+		const traceId = getCurrentTraceId();
 		const m =
 			level === 'error' ? chalk.red(message) :
 			level === 'warning' ? chalk.yellow(message) :
@@ -65,6 +67,9 @@ export default class Logger {
 			null;
 
 		let log = `${l} ${worker}\t[${contexts.join(' ')}]\t${m}`;
+		if (traceId) {
+			log += chalk.gray(` TraceId: ${traceId}`);
+		}
 		if (envOption.withLogTime) log = chalk.gray(time) + ' ' + log;
 
 		const args: unknown[] = [important ? chalk.bold(log) : log];

@@ -31,6 +31,7 @@ import { HealthServerService } from './HealthServerService.js';
 import { ClientServerService } from './web/ClientServerService.js';
 import { OpenApiServerService } from './api/openapi/OpenApiServerService.js';
 import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
+import { runWithTraceId } from '@/tracing/TraceContext.js';
 
 const _dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -79,6 +80,19 @@ export class ServerService implements OnApplicationShutdown {
 			logger: false,
 		});
 		this.#fastify = fastify;
+
+		fastify.addHook('onRequest', (request, reply, done) => {
+			const headerValue = request.headers['request-id'];
+			const rawTraceId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+			const traceId = typeof rawTraceId === 'string' ? rawTraceId.trim() : undefined;
+
+			if (!traceId) {
+				done();
+				return;
+			}
+
+			runWithTraceId(traceId, done);
+		});
 
 		// HSTS
 		// 6months (15552000sec)
