@@ -25,6 +25,7 @@ import { genEmbedCode } from '@/utility/get-embed-code.js';
 import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { globalEvents } from '@/events.js';
+import { createNyokiruText } from '@/utility/nyokiru.js';
 
 const isInBrowserTranslationAvailable = (
 	'LanguageDetector' in window &&
@@ -598,6 +599,29 @@ export function getRenoteMenu(props: {
 	const channelRenoteItems: MenuItem[] = [];
 	const normalRenoteItems: MenuItem[] = [];
 	const normalExternalChannelRenoteItems: MenuItem[] = [];
+	const canNyokiru = !props.mock && appearNote.text != null && appearNote.text.length > 0;
+
+	function getNyokiruItem(): MenuItem {
+		return {
+			text: i18n.ts.nyokiru,
+			icon: 'ti ti-leaf',
+			action: () => {
+				const configuredVisibility = prefer.s.rememberNoteVisibility ? store.s.visibility : prefer.s.defaultNoteVisibility;
+				const localOnly = configuredVisibility === 'specified'
+					? false
+					: prefer.s.rememberNoteVisibility ? store.s.localOnly : prefer.s.defaultNoteLocalOnly;
+
+				void os.apiWithDialog('notes/create', {
+					text: createNyokiruText(appearNote.text!),
+					localOnly,
+					visibility: configuredVisibility,
+				}).then((res) => {
+					os.toast(i18n.ts.nyokirued);
+					globalEvents.emit('notePosted', res.createdNote);
+				});
+			},
+		};
+	}
 
 	if (appearNote.channel) {
 		channelRenoteItems.push(...[{
@@ -635,7 +659,7 @@ export function getRenoteMenu(props: {
 					});
 				}
 			},
-		}]);
+		}, ...(!appearNote.channel.allowRenoteToExternal && canNyokiru ? [getNyokiruItem()] : [])]);
 	}
 
 	if (!appearNote.channel || appearNote.channel.allowRenoteToExternal) {
@@ -681,7 +705,7 @@ export function getRenoteMenu(props: {
 					renote: appearNote,
 				});
 			},
-		}])]);
+		}, ...(canNyokiru ? [getNyokiruItem()] : [])])]);
 
 		normalExternalChannelRenoteItems.push({
 			type: 'parent',

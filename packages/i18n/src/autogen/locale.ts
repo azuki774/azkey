@@ -481,6 +481,14 @@ export interface Locale extends ILocale {
      */
     "renotedToX": ParameterizedString<"name">;
     /**
+     * ニョキる
+     */
+    "nyokiru": string;
+    /**
+     * ニョキりました。
+     */
+    "nyokirued": string;
+    /**
      * この投稿はリノートできません。
      */
     "cantRenote": string;
@@ -1996,6 +2004,10 @@ export interface Locale extends ILocale {
      * {user}のノート
      */
     "noteOf": ParameterizedString<"user">;
+    /**
+     * ノート間隔
+     */
+    "noteSpacing": string;
     /**
      * 引用付き
      */
@@ -6055,6 +6067,24 @@ export interface Locale extends ILocale {
          * リアクションで使用するパレット
          */
         "paletteForReaction": string;
+    };
+    "_noteSpacing": {
+        /**
+         * 極狭い
+         */
+        "extremelyNarrow": string;
+        /**
+         * 狭い
+         */
+        "narrow": string;
+        /**
+         * 普通
+         */
+        "normal": string;
+        /**
+         * 広い
+         */
+        "wide": string;
     };
     "_settings": {
         /**
