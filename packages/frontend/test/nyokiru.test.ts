@@ -47,6 +47,12 @@ describe('createNyokiruText', () => {
 		expect(createNyokiruText('abc123def')).toBe('abc123def2');
 	});
 
+	test('handles short punctuation-only text', () => {
+		expect(createNyokiruText('.')).toBe('.2');
+		expect(createNyokiruText(',')).toBe(',2');
+		expect(createNyokiruText('!')).toBe('!2');
+	});
+
 	test('adds 2 with a space after a custom emoji', () => {
 		expect(createNyokiruText(':hoge:')).toBe(':hoge: 2');
 	});
