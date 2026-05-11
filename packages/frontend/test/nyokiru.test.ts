@@ -47,6 +47,72 @@ describe('createNyokiruText', () => {
 		expect(createNyokiruText('abc123def')).toBe('abc123def2');
 	});
 
+	test('handles short punctuation-only text', () => {
+		expect(createNyokiruText('.')).toBe('.2');
+		expect(createNyokiruText(',')).toBe(',2');
+		expect(createNyokiruText('!')).toBe('!2');
+	});
+
+	test('adds 2 with a space after a custom emoji', () => {
+		expect(createNyokiruText(':hoge:')).toBe(':hoge: 2');
+	});
+
+	test('adds 2 with a space after a hyphenated custom emoji', () => {
+		expect(createNyokiruText(':hoge-foo:')).toBe(':hoge-foo: 2');
+	});
+
+	test('adds 2 with a space after text ending with a custom emoji', () => {
+		expect(createNyokiruText('abc :hoge:')).toBe('abc :hoge: 2');
+	});
+
+	test('increments a number after a custom emoji when separated by a space', () => {
+		expect(createNyokiruText(':hoge: 2')).toBe(':hoge: 3');
+	});
+
+	test('adds 2 with a space after a URL', () => {
+		expect(createNyokiruText('https://example.com')).toBe('https://example.com 2');
+	});
+
+	test('adds 2 with a space after an http URL', () => {
+		expect(createNyokiruText('http://example.com')).toBe('http://example.com 2');
+	});
+
+	test('adds 2 with a space after a URL ending with a number', () => {
+		expect(createNyokiruText('https://example.com/path/1')).toBe('https://example.com/path/1 2');
+	});
+
+	test('adds 2 with a space after a mention', () => {
+		expect(createNyokiruText('@alice')).toBe('@alice 2');
+	});
+
+	test('adds 2 with a space after a remote mention ending with a number', () => {
+		expect(createNyokiruText('@alice@example.com2')).toBe('@alice@example.com2 2');
+	});
+
+	test('adds 2 with a space after a hashtag', () => {
+		expect(createNyokiruText('#tag')).toBe('#tag 2');
+	});
+
+	test('adds 2 with a newline after a quote', () => {
+		expect(createNyokiruText('> quote')).toBe('> quote\n2');
+	});
+
+	test('adds 2 with a newline after a code block', () => {
+		expect(createNyokiruText('```\ncode\n```')).toBe('```\ncode\n```\n2');
+	});
+
+	test('adds 2 with a newline after a math block', () => {
+		expect(createNyokiruText('\\[x+1\\]')).toBe('\\[x+1\\]\n2');
+	});
+
+	test('adds 2 with a newline after a search syntax', () => {
+		expect(createNyokiruText('検索 [search]')).toBe('検索 [search]\n2');
+	});
+
+	test('adds 2 with a newline after a center tag', () => {
+		expect(createNyokiruText('<center>text</center>')).toBe('<center>text</center>\n2');
+	});
+
 	test('handles empty text', () => {
 		expect(createNyokiruText('')).toBe('2');
 	});
