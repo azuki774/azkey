@@ -26,6 +26,7 @@ import { prefer } from '@/preferences.js';
 import { getPluginHandlers } from '@/plugin.js';
 import { globalEvents } from '@/events.js';
 import { createNyokiruText } from '@/utility/nyokiru.js';
+import { createManchinText } from '@/utility/manchin.js';
 
 const isInBrowserTranslationAvailable = (
 	'LanguageDetector' in window &&
@@ -600,6 +601,7 @@ export function getRenoteMenu(props: {
 	const normalRenoteItems: MenuItem[] = [];
 	const normalExternalChannelRenoteItems: MenuItem[] = [];
 	const canNyokiru = !props.mock && appearNote.text != null && appearNote.text.length > 0;
+	const canManchin = !props.mock && appearNote.text != null && appearNote.text.length > 0;
 
 	function getNyokiruItem(): MenuItem {
 		return {
@@ -617,6 +619,33 @@ export function getRenoteMenu(props: {
 					visibility: configuredVisibility,
 				}).then((res) => {
 					os.toast(i18n.ts.nyokirued);
+					globalEvents.emit('notePosted', res.createdNote);
+				});
+			},
+		};
+	}
+
+	function getManchinItem(): MenuItem {
+		return {
+			text: i18n.ts.manchin,
+			icon: 'ti ti-arrows-left-right',
+			action: () => {
+				const converted = createManchinText(appearNote.text!);
+				if (converted === null) {
+					os.alert({ type: 'info', text: i18n.ts.manchinNotFound });
+					return;
+				}
+				const configuredVisibility = prefer.s.rememberNoteVisibility ? store.s.visibility : prefer.s.defaultNoteVisibility;
+				const localOnly = configuredVisibility === 'specified'
+					? false
+					: prefer.s.rememberNoteVisibility ? store.s.localOnly : prefer.s.defaultNoteLocalOnly;
+
+				void os.apiWithDialog('notes/create', {
+					text: converted,
+					localOnly,
+					visibility: configuredVisibility,
+				}).then((res) => {
+					os.toast(i18n.ts.manchined);
 					globalEvents.emit('notePosted', res.createdNote);
 				});
 			},
@@ -659,7 +688,8 @@ export function getRenoteMenu(props: {
 					});
 				}
 			},
-		}, ...(!appearNote.channel.allowRenoteToExternal && canNyokiru ? [getNyokiruItem()] : [])]);
+		}, ...(!appearNote.channel.allowRenoteToExternal && canNyokiru ? [getNyokiruItem()] : []),
+			...(!appearNote.channel.allowRenoteToExternal && canManchin ? [getManchinItem()] : [])]);
 	}
 
 	if (!appearNote.channel || appearNote.channel.allowRenoteToExternal) {
@@ -705,7 +735,8 @@ export function getRenoteMenu(props: {
 					renote: appearNote,
 				});
 			},
-		}, ...(canNyokiru ? [getNyokiruItem()] : [])])]);
+		}, ...(canNyokiru ? [getNyokiruItem()] : []),
+			...(canManchin ? [getManchinItem()] : [])])]);
 
 		normalExternalChannelRenoteItems.push({
 			type: 'parent',
