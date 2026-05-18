@@ -52,7 +52,7 @@ describe('createManchinText', () => {
 	});
 
 	test('URL 部分（mfm-js が URL と認識する範囲）は変換されない', () => {
-  		expect(createManchinText('https://example.com/マン マンを見て')).toBe('https://example.com/チン チンを見て');
+		expect(createManchinText('https://example.com/マン マンを見て')).toBe('https://example.com/マン チンを見て');
 	});
 
 	test('英数字のみの URL は完全に保全される', () => {
@@ -65,5 +65,13 @@ describe('createManchinText', () => {
 
 	test('すべて特殊ノードのみの場合は null を返す', () => {
 		expect(createManchinText('#マンガ @manuser')).toBeNull();
+	});
+
+	test('MFM 太字内のテキストは変換される', () => {
+		expect(createManchinText('**マンが好き**')).toBe('**チンが好き**');
+	});
+
+	test('MFM スケール内のテキストは変換される', () => {
+		expect(createManchinText('$[scale.x=2 マン]')).toBe('$[scale.x=2 チン]');
 	});
 });

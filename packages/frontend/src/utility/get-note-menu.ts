@@ -601,7 +601,7 @@ export function getRenoteMenu(props: {
 	const normalRenoteItems: MenuItem[] = [];
 	const normalExternalChannelRenoteItems: MenuItem[] = [];
 	const canNyokiru = !props.mock && appearNote.text != null && appearNote.text.length > 0;
-	const canManchin = !props.mock && appearNote.text != null && appearNote.text.length > 0;
+	const canManchin = !props.mock && appearNote.text != null && appearNote.text.length > 0 && prefer.s.enableManchinTranslation;
 
 	function getNyokiruItem(): MenuItem {
 		return {

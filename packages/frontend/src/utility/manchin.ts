@@ -15,14 +15,28 @@ function swapManchin(text: string): { result: string; changed: boolean } {
 
 function transformNodes(nodes: mfm.MfmNode[]): { nodes: mfm.MfmNode[]; changed: boolean } {
 	let changed = false;
-	const result = nodes.map((node) => {
+	const result = nodes.map((node, i) => {
 		if (node.type === 'text') {
-			const { result: newText, changed: nodeChanged } = swapManchin(node.props.text);
+			let text = node.props.text;
+			let urlSuffix = '';
+
+			// mfm-js may not include non-ASCII characters in URL node props.url,
+			// leaving them as the start of the next text node. Treat leading
+			// non-whitespace after a URL node as a URL path continuation.
+			if (i > 0 && nodes[i - 1].type === 'url') {
+				const m = text.match(/^(\S+)([\s\S]*)$/);
+				if (m) {
+					urlSuffix = m[1];
+					text = m[2];
+				}
+			}
+
+			const { result: newText, changed: nodeChanged } = swapManchin(text);
 			if (nodeChanged) {
 				changed = true;
-				return { ...node, props: { text: newText } } as mfm.MfmNode;
+				return { ...node, props: { text: urlSuffix + newText } } as mfm.MfmNode;
 			}
-			return node;
+			return urlSuffix ? { ...node, props: { text: urlSuffix + text } } as mfm.MfmNode : node;
 		}
 		if ('children' in node && node.children != null) {
 			const { nodes: newChildren, changed: childChanged } = transformNodes(node.children as mfm.MfmNode[]);

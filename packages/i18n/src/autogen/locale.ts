@@ -489,17 +489,21 @@ export interface Locale extends ILocale {
      */
     "nyokirued": string;
     /**
-     * マンチン変換
+     * ManChin Translation
      */
     "manchin": string;
     /**
-     * マンチン変換しました。
+     * ManChin Translation しました。
      */
     "manchined": string;
     /**
      * どちらもついていないようです。。。
      */
     "manchinNotFound": string;
+    /**
+     * ManChin Translationを使用する。
+     */
+    "enableManchinTranslation": string;
     /**
      * この投稿はリノートできません。
      */
