@@ -5,6 +5,10 @@ on:
     tags:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY_IMAGE: ghcr.io/azuki774/misskey
   TAGS: |
@@ -46,7 +50,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GH_ACCESS_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push to ghcr.io
         id: build
         uses: docker/build-push-action@v7
@@ -96,7 +100,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GH_ACCESS_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
