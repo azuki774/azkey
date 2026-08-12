@@ -36,8 +36,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-node-version:
+    name: Check base/head Node.js versions
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.compare.outputs.skip }}
+      base_version: ${{ steps.compare.outputs.base_version }}
+      head_version: ${{ steps.compare.outputs.head_version }}
+    steps:
+      - name: Checkout base
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.base.repo.full_name }}
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          submodules: true
+
+      - name: Checkout head
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          submodules: true
+
+      - name: Compare .node-version
+        id: compare
+        shell: bash
+        run: |
+          base_version="$(cat base/.node-version)"
+          head_version="$(cat head/.node-version)"
+          echo "base_version=${base_version}" >> "$GITHUB_OUTPUT"
+          echo "head_version=${head_version}" >> "$GITHUB_OUTPUT"
+          if [ "$base_version" != "$head_version" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   report:
     name: Measure frontend diagnostics
+    needs: check-node-version
+    if: needs.check-node-version.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
