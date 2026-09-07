@@ -9,6 +9,7 @@ on:
 jobs:
   publish-misskey-js:
     name: Publish misskey-js
+    if: github.repository == 'misskey-dev/misskey'
     runs-on: ubuntu-latest
 
     permissions:
