@@ -88,7 +88,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</div>
 					</div>
 					<div v-if="appearNote.files && appearNote.files.length > 0" :class="$style.mediaList">
-						<MkMediaList ref="galleryEl" :mediaList="appearNote.files"/>
+						<MkMediaList ref="galleryEl" :mediaList="appearNote.files" :user="appearNote.user"/>
 					</div>
 					<MkPoll
 						v-if="appearNote.poll"
@@ -360,7 +360,7 @@ const keymap = {
 			renoteCollapsed.value = false;
 		} else if (appearNote.cw != null) {
 			showContent.value = !showContent.value;
-		} else if (isLong.value) {
+		} else if (isLong) {
 			collapsed.value = !collapsed.value;
 		}
 	},
