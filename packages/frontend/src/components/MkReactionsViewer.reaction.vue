@@ -64,11 +64,17 @@ const emojiName = computed(() => getEmojiNameFromReaction(props.reaction));
 const isLocalCustomEmoji = computed(() => isLocalCustomEmojiReaction(props.reaction));
 
 const canToggle = computed(() => {
+	if ($i == null) return false;
+
+	// リモートホスト付きのカスタム絵文字はローカルの絵文字一覧には存在しないため、
+	// クライアントでは相乗りを許可し、最終的な解決・権限判定はサーバー側で行う。
+	if (props.reaction[0] === ':' && !isLocalCustomEmoji.value) return true;
+
 	const emoji = isLocalCustomEmoji.value ? customEmojisMap.get(emojiName.value) : getUnicodeEmojiOrNull(props.reaction);
 
 	// TODO
-	//return $i != null && emoji != null && checkReactionPermissions($i, props.note, emoji);
-	return $i != null && emoji != null;
+	//return emoji != null && checkReactionPermissions($i, props.note, emoji);
+	return emoji != null;
 });
 
 async function toggleReaction() {
