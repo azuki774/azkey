@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-FileCopyrightText: 2026 azuki
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -9,6 +10,7 @@ import type { EmojisRepository, NoteReactionsRepository, UsersRepository, NotesR
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiRemoteUser, MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
+import type { MiEmoji } from '@/models/Emoji.js';
 import { IdService } from '@/core/IdService.js';
 import type { MiNoteReaction } from '@/models/NoteReaction.js';
 import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js';
@@ -64,8 +66,10 @@ type DecodedReaction = {
 	host?: string | null;
 };
 
-const isCustomEmojiRegexp = /^:([\w+-]+)(?:@\.)?:$/;
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
+
+// Remote emoji reaction handling implemented for azkey with reference to mkkey:
+// https://github.com/emtkmkk/mkkey/tree/f311781a61d11c88fa9e84edcf89ff6fbf540eb0
 
 @Injectable()
 export class ReactionService {
@@ -103,7 +107,7 @@ export class ReactionService {
 	}
 
 	@bindThis
-	public async create(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot'] }, note: MiNote, _reaction?: string | null) {
+	public async create(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot'] }, note: MiNote, _reaction?: string | null, resolvedEmoji?: MiEmoji | null) {
 		// Check blocking
 		if (note.userId !== user.id) {
 			const blocked = await this.userBlockingService.checkBlocked(note.userId, user.id);
@@ -127,21 +131,53 @@ export class ReactionService {
 		if (note.reactionAcceptance === 'likeOnly' || ((note.reactionAcceptance === 'likeOnlyForRemote' || note.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote') && (user.host != null))) {
 			reaction = '\u2764';
 		} else if (_reaction != null) {
-			const custom = reaction.match(isCustomEmojiRegexp);
+			const custom = reaction.match(decodeCustomEmojiRegexp);
 			if (custom) {
 				const reacterHost = this.utilityService.toPunyNullable(user.host);
-
 				const name = custom[1];
-				const emoji = reacterHost == null
-					? (await this.customEmojiService.localEmojisCache.fetch()).get(name)
-					: await this.emojisRepository.findOneBy({
-						host: reacterHost,
-						name,
-					});
+
+				let emoji: MiEmoji | null = null;
+				// This value is produced only by ApInboxService after resolving a
+				// matching Emoji tag. It cannot be supplied by an AP reaction string.
+				if (reacterHost != null && resolvedEmoji?.name === name) {
+					emoji = resolvedEmoji;
+				}
+
+				let hostsToSearch: (string | null | undefined)[];
+				if (reacterHost == null) {
+					// ローカルユーザーからの相乗りでは、クリックされたリアクションに含まれる
+					// ホストを尊重する。リモートactorにはこの経路を許可しない。
+					const noteHost = note.userHost;
+					const declaredHostRaw = custom[2];
+					const declaredHost = declaredHostRaw == null
+						? undefined
+						: declaredHostRaw === '.'
+							? null
+							: this.utilityService.toPunyNullable(declaredHostRaw);
+					const resolvedDeclaredHost = declaredHost != null && this.utilityService.isSelfHost(declaredHost) ? null : declaredHost;
+
+					hostsToSearch = declaredHost !== undefined
+						? [resolvedDeclaredHost, null, noteHost]
+						: [null, noteHost];
+				} else {
+					// リモートから受信したActivityは任意ホストを詐称できるため、
+					// 従来通りリアクションした本人のホストだけを対象にする。
+					hostsToSearch = [reacterHost];
+				}
+
+				if (emoji == null) {
+					const hosts = [...new Set(hostsToSearch)].filter((host): host is string | null => host !== undefined);
+					for (const host of hosts) {
+						emoji = host == null
+							? (await this.customEmojiService.localEmojisCache.fetch()).get(name) ?? null
+							: await this.emojisRepository.findOneBy({ host, name });
+						if (emoji) break;
+					}
+				}
 
 				if (emoji) {
 					if (emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.length === 0 || (await this.roleService.getUserRoles(user.id)).some(r => emoji.roleIdsThatCanBeUsedThisEmojiAsReaction.includes(r.id))) {
-						reaction = reacterHost ? `:${name}@${reacterHost}:` : `:${name}:`;
+						reaction = emoji.host ? `:${name}@${emoji.host}:` : `:${name}:`;
 
 						// センシティブ
 						if ((note.reactionAcceptance === 'nonSensitiveOnly' || note.reactionAcceptance === 'nonSensitiveOnlyForLocalLikeOnlyForRemote') && emoji.isSensitive) {
@@ -149,7 +185,7 @@ export class ReactionService {
 						}
 
 						// for media silenced host, custom emoji reactions are not allowed
-						if (reacterHost != null && this.utilityService.isMediaSilencedHost(this.meta.mediaSilencedHosts, reacterHost)) {
+						if (emoji.host != null && this.utilityService.isMediaSilencedHost(this.meta.mediaSilencedHosts, emoji.host)) {
 							reaction = FALLBACK;
 						}
 					} else {

@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-FileCopyrightText: 2026 azuki
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -21,6 +22,7 @@ import { IdService } from '@/core/IdService.js';
 import { PollService } from '@/core/PollService.js';
 import { StatusError } from '@/misc/status-error.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { bindThis } from '@/decorators.js';
 import { checkHttps } from '@/misc/check-https.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
@@ -36,7 +38,12 @@ import { ApMentionService } from './ApMentionService.js';
 import { ApQuestionService } from './ApQuestionService.js';
 import { ApImageService } from './ApImageService.js';
 import type { Resolver } from '../ApResolverService.js';
-import type { IObject, IPost } from '../type.js';
+import type { IApEmoji, IObject, IPost } from '../type.js';
+
+const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
+
+// Remote emoji reaction handling implemented for azkey with reference to mkkey:
+// https://github.com/emtkmkk/mkkey/tree/f311781a61d11c88fa9e84edcf89ff6fbf540eb0
 
 @Injectable()
 export class ApNoteService {
@@ -67,6 +74,7 @@ export class ApNoteService {
 		private apPersonService: ApPersonService,
 
 		private utilityService: UtilityService,
+		private customEmojiService: CustomEmojiService,
 		private apAudienceService: ApAudienceService,
 		private apMentionService: ApMentionService,
 		private apImageService: ApImageService,
@@ -440,5 +448,106 @@ export class ApNoteService {
 				license: (tag._misskey_license?.freeText ?? null)
 			});
 		}));
+	}
+
+	/**
+	 * Resolve an emoji tag used by a Like without allowing the Like actor to
+	 * overwrite an emoji that belongs to another host.
+	 */
+	@bindThis
+	public async resolveReactionEmoji(tags: IObject | IObject[], reaction: string, actorHost: string): Promise<MiEmoji | null> {
+		const reactionMatch = reaction.match(decodeCustomEmojiRegexp);
+		if (reactionMatch == null) return null;
+
+		const name = reactionMatch[1];
+		const actorHostNormalized = this.utilityService.toPuny(actorHost);
+		// In a reaction string, @. has historically meant the remote actor's
+		// local emoji, not this server's local emoji.
+		let declaredHost = reactionMatch[2] == null
+			? undefined
+			: reactionMatch[2] === '.' ? actorHostNormalized : this.utilityService.toPunyNullable(reactionMatch[2]);
+		if (declaredHost === '') declaredHost = undefined;
+		if (declaredHost != null && this.utilityService.isSelfHost(declaredHost)) declaredHost = null;
+
+		const candidates = toArray(tags).flatMap((rawTag) => {
+			if (rawTag == null || typeof rawTag !== 'object') return [];
+			const tag = rawTag as IApEmoji;
+			if (getApType(tag) !== 'Emoji') return [];
+			if (typeof tag.name !== 'string') return [];
+			const tagMatch = tag.name.match(decodeCustomEmojiRegexp);
+			if (tagMatch == null || tagMatch[1] !== name) return [];
+
+			let host: string | null | undefined;
+			try {
+				if (typeof tag.host === 'string') {
+					host = this.utilityService.toPunyNullable(tag.host);
+					if (host === '') host = undefined;
+				}
+				if (host === undefined && tagMatch[2] != null) {
+					host = tagMatch[2] === '.' ? actorHostNormalized : this.utilityService.toPunyNullable(tagMatch[2]);
+					if (host === '') host = undefined;
+				}
+				if (host === undefined && typeof tag.id === 'string') {
+					const url = new URL(tag.id);
+					if (['http:', 'https:'].includes(url.protocol)) {
+						host = this.utilityService.toPunyNullable(url.host);
+						if (host === '') host = undefined;
+					}
+				}
+				if (host === undefined) {
+					host = this.utilityService.toPuny(actorHost);
+				}
+			} catch {
+				host = this.utilityService.toPuny(actorHost);
+			}
+
+			if (host != null && this.utilityService.isSelfHost(host)) host = null;
+			if (declaredHost !== undefined && declaredHost !== host) return [];
+
+			const icon = toSingle(tag.icon);
+			if (typeof icon?.url !== 'string') return [];
+			return [{ tag, host, iconUrl: icon.url }];
+		});
+
+		// A Like may carry unrelated Emoji tags. Only a single matching tag is
+		// authoritative; ambiguity keeps the historic actor-host fallback.
+		if (candidates.length !== 1) return null;
+
+		const { tag, host, iconUrl } = candidates[0];
+		if (host == null) {
+			return (await this.customEmojiService.localEmojisCache.fetch()).get(name) ?? null;
+		}
+
+		const existing = await this.emojisRepository.findOneBy({ host, name });
+		if (existing != null) {
+			// Only the emoji's own host may refresh its cached metadata. A relay is
+			// allowed to identify it, but not to replace its image or metadata.
+			if (host === actorHostNormalized && ((existing.updatedAt == null)
+				|| (tag.id != null && existing.uri == null)
+				|| (new Date(tag.updated) > existing.updatedAt)
+				|| (iconUrl !== existing.originalUrl))) {
+				await this.emojisRepository.update({ host, name }, {
+					uri: tag.id,
+					originalUrl: iconUrl,
+					publicUrl: iconUrl,
+					updatedAt: new Date(),
+					license: tag._misskey_license?.freeText ?? null,
+				});
+				return await this.emojisRepository.findOneByOrFail({ host, name });
+			}
+			return existing;
+		}
+
+		this.logger.info(`register reaction emoji host=${host}, name=${name}`);
+		try {
+			return await this.emojisRepository.insertOne({
+				id: this.idService.gen(), host, name, uri: tag.id,
+				originalUrl: iconUrl, publicUrl: iconUrl, updatedAt: new Date(), aliases: [],
+				license: tag._misskey_license?.freeText ?? null,
+			});
+		} catch {
+			// Another inbox worker may have inserted the same unique (name, host).
+			return await this.emojisRepository.findOneBy({ host, name });
+		}
 	}
 }

@@ -1,5 +1,6 @@
 <!--
 SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-FileCopyrightText: 2026 azuki
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -76,6 +77,7 @@ function onMockToggleReaction(emoji: string, count: number) {
 
 function canReact(reaction: string) {
 	if (!$i) return false;
+	if (reaction[0] === ':' && !isLocalCustomEmojiReaction(reaction)) return true;
 	// TODO: CheckPermissions
 	return isLocalCustomEmojiReaction(reaction)
 		? customEmojisMap.has(getEmojiNameFromReaction(reaction))

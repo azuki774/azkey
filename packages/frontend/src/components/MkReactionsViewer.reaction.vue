@@ -1,5 +1,6 @@
 <!--
 SPDX-FileCopyrightText: syuilo and misskey-project
+SPDX-FileCopyrightText: 2026 azuki
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
@@ -63,12 +64,20 @@ const emojiName = computed(() => getEmojiNameFromReaction(props.reaction));
 
 const isLocalCustomEmoji = computed(() => isLocalCustomEmojiReaction(props.reaction));
 
+const isRemoteCustomEmoji = computed(() => props.reaction[0] === ':' && !isLocalCustomEmoji.value);
+
 const canToggle = computed(() => {
+	if ($i == null) return false;
+
+	// リモートホスト付きのカスタム絵文字はローカルの絵文字一覧には存在しないため、
+	// クライアントでは相乗りを許可し、最終的な解決・権限判定はサーバー側で行う。
+	if (isRemoteCustomEmoji.value) return true;
+
 	const emoji = isLocalCustomEmoji.value ? customEmojisMap.get(emojiName.value) : getUnicodeEmojiOrNull(props.reaction);
 
 	// TODO
-	//return $i != null && emoji != null && checkReactionPermissions($i, props.note, emoji);
-	return $i != null && emoji != null;
+	//return emoji != null && checkReactionPermissions($i, props.note, emoji);
+	return emoji != null;
 });
 
 async function toggleReaction() {
@@ -107,16 +116,14 @@ async function toggleReaction() {
 					noteId: props.noteId,
 					reaction: props.reaction,
 				}).then(() => {
-					const emoji = customEmojisMap.get(emojiName.value);
-					if (emoji == null && getUnicodeEmojiOrNull(props.reaction) == null) {
-						return;
+					if (isRemoteCustomEmoji.value) {
+						syncReactionState().catch(showReactionSyncError);
+					} else {
+						emitReaction(me.id);
 					}
-					noteEvents.emit(`reacted:${props.noteId}`, {
-						userId: me.id,
-						reaction: props.reaction,
-						emoji: emoji,
-					});
 				});
+			} else {
+				syncReactionState().catch(showReactionSyncError);
 			}
 		});
 	} else {
@@ -141,22 +148,45 @@ async function toggleReaction() {
 			noteId: props.noteId,
 			reaction: props.reaction,
 		}).then(() => {
-			const emoji = customEmojisMap.get(emojiName.value);
-			if (emoji == null && getUnicodeEmojiOrNull(props.reaction) == null) {
-				return;
+			if (isRemoteCustomEmoji.value) {
+				syncReactionState().catch(showReactionSyncError);
+			} else {
+				emitReaction(me.id);
 			}
-
-			noteEvents.emit(`reacted:${props.noteId}`, {
-				userId: me.id,
-				reaction: props.reaction,
-				emoji: emoji,
-			});
 		});
 		// TODO: 上位コンポーネントでやる
 		//if (props.note.text && props.note.text.length > 100 && (Date.now() - new Date(props.note.createdAt).getTime() < 1000 * 3)) {
 		//	claimAchievement('reactWithoutRead');
 		//}
 	}
+}
+
+function emitReaction(userId: Misskey.entities.User['id']): void {
+	const emoji = customEmojisMap.get(emojiName.value);
+	if (emoji == null && getUnicodeEmojiOrNull(props.reaction) == null) return;
+	noteEvents.emit(`reacted:${props.noteId}`, {
+		userId,
+		reaction: props.reaction,
+		emoji,
+	});
+}
+
+async function syncReactionState(): Promise<void> {
+	const note = await misskeyApi('notes/show', {
+		noteId: props.noteId,
+	});
+	noteEvents.emit(`reactionState:${props.noteId}`, {
+		reactions: note.reactions,
+		reactionEmojis: note.reactionEmojis,
+		myReaction: note.myReaction,
+	});
+}
+
+function showReactionSyncError(): void {
+	os.alert({
+		type: 'error',
+		text: i18n.ts.somethingHappened,
+	});
 }
 
 async function menu(ev: PointerEvent) {
