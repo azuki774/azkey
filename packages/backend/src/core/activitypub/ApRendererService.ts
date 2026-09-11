@@ -23,7 +23,7 @@ import { MfmService } from '@/core/MfmService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
 import type { MiUserKeypair } from '@/models/UserKeypair.js';
-import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, PollsRepository, MiMeta } from '@/models/_.js';
+import type { UsersRepository, UserProfilesRepository, NotesRepository, DriveFilesRepository, PollsRepository, MiMeta, EmojisRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import { IdService } from '@/core/IdService.js';
@@ -33,6 +33,8 @@ import { JsonLdService } from './JsonLdService.js';
 import { ApMfmService } from './ApMfmService.js';
 import { CONTEXT } from './misc/contexts.js';
 import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IMove, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
+
+const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
 
 @Injectable()
 export class ApRendererService {
@@ -57,6 +59,9 @@ export class ApRendererService {
 
 		@Inject(DI.pollsRepository)
 		private pollsRepository: PollsRepository,
+
+		@Inject(DI.emojisRepository)
+		private emojisRepository: EmojisRepository,
 
 		private customEmojiService: CustomEmojiService,
 		private userEntityService: UserEntityService,
@@ -181,7 +186,7 @@ export class ApRendererService {
 	@bindThis
 	public renderEmoji(emoji: MiEmoji): IApEmoji {
 		return {
-			id: `${this.config.url}/emojis/${emoji.name}`,
+			id: emoji.uri || `${this.config.url}/emojis/${emoji.name}`,
 			type: 'Emoji',
 			name: `:${emoji.name}:`,
 			updated: emoji.updatedAt != null ? emoji.updatedAt.toISOString() : new Date().toISOString(),
@@ -309,22 +314,34 @@ export class ApRendererService {
 	@bindThis
 	public async renderLike(noteReaction: MiNoteReaction, note: { uri: string | null }): Promise<ILike> {
 		const reaction = noteReaction.reaction;
+		let sendReaction = reaction;
+		let emoji: MiEmoji | null = null;
+
+		const custom = reaction.match(decodeCustomEmojiRegexp);
+		if (custom) {
+			const name = custom[1];
+			const host = custom[2] === '.' ? null : (custom[2] ?? null);
+			emoji = host == null
+				? (await this.customEmojiService.localEmojisCache.fetch()).get(name) ?? null
+				: await this.emojisRepository.findOneBy({ host, name });
+
+			// 通常のMisskeyは :name@host: をカスタム絵文字リアクションとして扱えないため、
+			// リモート絵文字は :name: と Emoji tag の組み合わせで配信する。
+			if (host != null) {
+				sendReaction = `:${name}:`;
+			}
+		}
 
 		const object: ILike = {
 			type: 'Like',
 			id: `${this.config.url}/likes/${noteReaction.id}`,
 			actor: `${this.config.url}/users/${noteReaction.userId}`,
 			object: note.uri ? note.uri : `${this.config.url}/notes/${noteReaction.noteId}`,
-			content: reaction,
-			_misskey_reaction: reaction,
+			content: sendReaction,
+			_misskey_reaction: sendReaction,
 		};
 
-		if (reaction.startsWith(':')) {
-			const name = reaction.replaceAll(':', '');
-			const emoji = (await this.customEmojiService.localEmojisCache.fetch()).get(name);
-
-			if (emoji && !emoji.localOnly) object.tag = [this.renderEmoji(emoji)];
-		}
+		if (emoji && !emoji.localOnly) object.tag = [this.renderEmoji(emoji)];
 
 		return object;
 	}
