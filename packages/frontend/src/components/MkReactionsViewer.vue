@@ -76,6 +76,7 @@ function onMockToggleReaction(emoji: string, count: number) {
 
 function canReact(reaction: string) {
 	if (!$i) return false;
+	if (reaction[0] === ':' && !isLocalCustomEmojiReaction(reaction)) return true;
 	// TODO: CheckPermissions
 	return isLocalCustomEmojiReaction(reaction)
 		? customEmojisMap.has(getEmojiNameFromReaction(reaction))
