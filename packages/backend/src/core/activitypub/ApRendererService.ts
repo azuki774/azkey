@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-FileCopyrightText: 2026 azuki
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -35,6 +36,9 @@ import { CONTEXT } from './misc/contexts.js';
 import type { IAccept, IActivity, IAdd, IAnnounce, IApDocument, IApEmoji, IApHashtag, IApImage, IApMention, IBlock, ICreate, IDelete, IFlag, IFollow, IKey, ILike, IMove, IObject, IPost, IQuestion, IReject, IRemove, ITombstone, IUndo, IUpdate } from './type.js';
 
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
+
+// Remote emoji reaction handling implemented for azkey with reference to mkkey:
+// https://github.com/emtkmkk/mkkey/tree/f311781a61d11c88fa9e84edcf89ff6fbf540eb0
 
 @Injectable()
 export class ApRendererService {

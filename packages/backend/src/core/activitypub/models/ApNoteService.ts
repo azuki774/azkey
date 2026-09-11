@@ -1,5 +1,6 @@
 /*
  * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-FileCopyrightText: 2026 azuki
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -40,6 +41,9 @@ import type { Resolver } from '../ApResolverService.js';
 import type { IApEmoji, IObject, IPost } from '../type.js';
 
 const decodeCustomEmojiRegexp = /^:([\w+-]+)(?:@([\w.-]+))?:$/;
+
+// Remote emoji reaction handling implemented for azkey with reference to mkkey:
+// https://github.com/emtkmkk/mkkey/tree/f311781a61d11c88fa9e84edcf89ff6fbf540eb0
 
 @Injectable()
 export class ApNoteService {
