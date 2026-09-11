@@ -19,6 +19,7 @@ import { globalEvents } from '@/events.js';
 export const noteEvents = new EventEmitter<{
 	[ev: `reacted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; reaction: string; emoji?: { name: string; url: string; } | null; }) => void;
 	[ev: `unreacted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; reaction: string; emoji?: { name: string; url: string; } | null; }) => void;
+	[ev: `reactionState:${string}`]: (ctx: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis' | 'myReaction'>) => void;
 	[ev: `pollVoted:${string}`]: (ctx: { userId: Misskey.entities.User['id']; choice: number; }) => void;
 }>();
 
@@ -219,6 +220,7 @@ export function useNoteCapture(props: {
 
 	noteEvents.on(`reacted:${note.id}`, onReacted);
 	noteEvents.on(`unreacted:${note.id}`, onUnreacted);
+	noteEvents.on(`reactionState:${note.id}`, onReactionState);
 	noteEvents.on(`pollVoted:${note.id}`, onPollVoted);
 
 	// 操作がダブっていないかどうかを簡易的に記録するためのMap
@@ -250,7 +252,7 @@ export function useNoteCapture(props: {
 		normalizedName = normalizedName.match('\u200d') ? normalizedName : normalizedName.replace(/\ufe0f/g, '');
 
 		// 確実に一度リアクションされて取り消されている場合のみ処理をとめる（APIで初回読み込み→Streamでアップデート等の場合、reactionUserMapに情報がないため）
-		if (reactionUserMap.has(ctx.userId) && reactionUserMap.get(ctx.userId) === noReaction) return;
+		if (reactionUserMap.has(ctx.userId) && reactionUserMap.get(ctx.userId) !== normalizedName) return;
 		reactionUserMap.set(ctx.userId, noReaction);
 
 		const currentCount = $note.reactions[normalizedName] || 0;
@@ -262,6 +264,19 @@ export function useNoteCapture(props: {
 		if ($i && (ctx.userId === $i.id)) {
 			$note.myReaction = null;
 		}
+	}
+
+	function onReactionState(ctx: Pick<Misskey.entities.Note, 'reactions' | 'reactionEmojis' | 'myReaction'>): void {
+		$note.reactions = Object.entries(ctx.reactions).reduce((acc, [name, count]) => {
+			const normalizedName = name.replace(/^:(\w+):$/, ':$1@.:');
+			acc[normalizedName] = (acc[normalizedName] ?? 0) + count;
+			return acc;
+		}, {} as Misskey.entities.Note['reactions']);
+		$note.reactionCount = Object.values(ctx.reactions).reduce((a, b) => a + b, 0);
+		$note.reactionEmojis = ctx.reactionEmojis;
+		$note.myReaction = ctx.myReaction == null ? null : ctx.myReaction.replace(/^:(\w+):$/, ':$1@.:');
+
+		if ($i) reactionUserMap.set($i.id, $note.myReaction ?? noReaction);
 	}
 
 	function onPollVoted(ctx: { userId: Misskey.entities.User['id']; choice: number; }): void {
@@ -302,6 +317,7 @@ export function useNoteCapture(props: {
 	onUnmounted(() => {
 		noteEvents.off(`reacted:${note.id}`, onReacted);
 		noteEvents.off(`unreacted:${note.id}`, onUnreacted);
+		noteEvents.off(`reactionState:${note.id}`, onReactionState);
 		noteEvents.off(`pollVoted:${note.id}`, onPollVoted);
 	});
 
