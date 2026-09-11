@@ -103,7 +103,7 @@ export class ReactionService {
 	}
 
 	@bindThis
-	public async create(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot'] }, note: MiNote, _reaction?: string | null) {
+	public async create(user: { id: MiUser['id']; host: MiUser['host']; isBot: MiUser['isBot'] }, note: MiNote, _reaction?: string | null, resolvedEmoji?: MiEmoji | null) {
 		// Check blocking
 		if (note.userId !== user.id) {
 			const blocked = await this.userBlockingService.checkBlocked(note.userId, user.id);
@@ -132,6 +132,13 @@ export class ReactionService {
 				const reacterHost = this.utilityService.toPunyNullable(user.host);
 				const name = custom[1];
 
+				let emoji: MiEmoji | null = null;
+				// This value is produced only by ApInboxService after resolving a
+				// matching Emoji tag. It cannot be supplied by an AP reaction string.
+				if (reacterHost != null && resolvedEmoji?.name === name) {
+					emoji = resolvedEmoji;
+				}
+
 				let hostsToSearch: (string | null | undefined)[];
 				if (reacterHost == null) {
 					// ローカルユーザーからの相乗りでは、クリックされたリアクションに含まれる
@@ -154,13 +161,14 @@ export class ReactionService {
 					hostsToSearch = [reacterHost];
 				}
 
-				const hosts = [...new Set(hostsToSearch)].filter((host): host is string | null => host !== undefined);
-				let emoji: MiEmoji | null = null;
-				for (const host of hosts) {
-					emoji = host == null
-						? (await this.customEmojiService.localEmojisCache.fetch()).get(name) ?? null
-						: await this.emojisRepository.findOneBy({ host, name });
-					if (emoji) break;
+				if (emoji == null) {
+					const hosts = [...new Set(hostsToSearch)].filter((host): host is string | null => host !== undefined);
+					for (const host of hosts) {
+						emoji = host == null
+							? (await this.customEmojiService.localEmojisCache.fetch()).get(name) ?? null
+							: await this.emojisRepository.findOneBy({ host, name });
+						if (emoji) break;
+					}
 				}
 
 				if (emoji) {

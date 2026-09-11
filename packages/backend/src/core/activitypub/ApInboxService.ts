@@ -200,10 +200,13 @@ export class ApInboxService {
 		const note = await this.apNoteService.fetchNote(targetUri);
 		if (!note) return `skip: target note not found ${targetUri}`;
 
-		await this.apNoteService.extractEmojis(activity.tag ?? [], actor.host).catch(() => null);
+		const reaction = activity._misskey_reaction ?? activity.content ?? activity.name;
+		const resolvedEmoji = typeof reaction === 'string'
+			? await this.apNoteService.resolveReactionEmoji(activity.tag ?? [], reaction, actor.host).catch(() => null)
+			: null;
 
 		try {
-			await this.reactionService.create(actor, note, activity._misskey_reaction ?? activity.content ?? activity.name);
+			await this.reactionService.create(actor, note, reaction, resolvedEmoji);
 			return 'ok';
 		} catch (err) {
 			if (err instanceof IdentifiableError && err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') {

@@ -189,6 +189,7 @@ export class ApRendererService {
 			id: emoji.uri || `${this.config.url}/emojis/${emoji.name}`,
 			type: 'Emoji',
 			name: `:${emoji.name}:`,
+			...(emoji.host != null ? { host: emoji.host } : {}),
 			updated: emoji.updatedAt != null ? emoji.updatedAt.toISOString() : new Date().toISOString(),
 			icon: {
 				type: 'Image',
