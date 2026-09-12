@@ -474,7 +474,11 @@ export class ApNoteService {
 			const tag = rawTag as IApEmoji;
 			if (getApType(tag) !== 'Emoji') return [];
 			if (typeof tag.name !== 'string') return [];
-			const tagMatch = tag.name.match(decodeCustomEmojiRegexp);
+			// Pleroma sends Emoji tag names without the colons required by the
+			// Misskey reaction representation. Keep malformed colon-containing
+			// names rejected by the usual parser.
+			const tagName = tag.name.includes(':') ? tag.name : `:${tag.name}:`;
+			const tagMatch = tagName.match(decodeCustomEmojiRegexp);
 			if (tagMatch == null || tagMatch[1] !== name) return [];
 
 			let host: string | null | undefined;
