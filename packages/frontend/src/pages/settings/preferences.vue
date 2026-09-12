@@ -801,6 +801,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 									</MkSwitch>
 								</MkPreferenceContainer>
 							</SearchMarker>
+
+							<SearchMarker :keywords="['manchin', 'translation']">
+								<MkPreferenceContainer k="enableManchinTranslation">
+									<MkSwitch v-model="enableManchinTranslation">
+										<template #label><SearchLabel>{{ i18n.ts.enableManchinTranslation }}</SearchLabel></template>
+									</MkSwitch>
+								</MkPreferenceContainer>
+							</SearchMarker>
 						</div>
 
 						<SearchMarker :keywords="['server', 'disconnect', 'reconnect', 'reload', 'streaming']">
@@ -959,6 +967,7 @@ const emojiStyle = prefer.model('emojiStyle');
 const useBlurEffectForModal = prefer.model('useBlurEffectForModal');
 const useBlurEffect = prefer.model('useBlurEffect');
 const defaultFollowWithReplies = prefer.model('defaultFollowWithReplies');
+const enableManchinTranslation = prefer.model('enableManchinTranslation');
 const chatShowSenderName = prefer.model('chat.showSenderName');
 const chatSendOnEnter = prefer.model('chat.sendOnEnter');
 const useStickyIcons = prefer.model('useStickyIcons');

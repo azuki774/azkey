@@ -545,4 +545,8 @@ export const PREF_DEF = definePreferences({
 	'experimental.enableWebTranslatorApi': {
 		default: false,
 	},
+
+	enableManchinTranslation: {
+		default: false,
+	},
 });
