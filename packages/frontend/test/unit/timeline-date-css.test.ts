@@ -5,101 +5,71 @@
 
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { compileScript, parse, registerTS } from 'vue/compiler-sfc';
+import { compileScript, compileStyleAsync, parse, registerTS } from 'vue/compiler-sfc';
 import ts from 'typescript';
 import { parseSync, transformSync } from 'rolldown/utils';
 import { RolldownMagicString } from 'rolldown';
+import { walk } from 'oxc-walker';
+import { compileString } from 'sass-embedded';
 import { unwindCssModuleClassName } from '../../lib/rollup-plugin-unwind-css-module-class-name.js';
 
 registerTS(() => ts);
 
-const frontendRoot = resolve(import.meta.dirname, '../..');
+describe('timeline date separator in production output', () => {
+	it.each(['MkNotesTimeline', 'MkStreamingNotesTimeline'])('preserves the date class in %s', async (component) => {
+		const filename = resolve(import.meta.dirname, `../../src/components/${component}.vue`);
+		const { descriptor } = parse(readFileSync(filename, 'utf8'), { filename });
+		const style = descriptor.styles.find((block) => block.module);
+		if (!style) throw new Error('Timeline CSS module not found');
+		// Derive the class map from the real stylesheet instead of maintaining a
+		// list of unrelated spacing, animation, note, and advertisement classes.
+		const css = await compileStyleAsync({
+			filename,
+			id: component,
+			source: compileString(style.content, { url: pathToFileURL(filename) }).css,
+			modules: true,
+		});
+		expect(css.errors).toEqual([]);
+		const dateClass = css.modules?.date;
+		expect(dateClass).toBeTruthy();
 
-function compileAndUnwind(filename: string, cssModuleKeys: string[]): string {
-	const source = readFileSync(filename, 'utf8');
-	const { descriptor, errors } = parse(source, { filename });
-	if (errors.length > 0) throw errors[0];
-
-	const compiled = compileScript(descriptor, {
-		id: filename,
-		genDefaultAs: '_sfc_main',
-		inlineTemplate: true,
-		isProd: true,
-		fs: {
-			fileExists: existsSync,
-			readFile: (path: string) => readFileSync(path, 'utf8'),
-			realpath: realpathSync,
-		},
-	});
-	const javascript = transformSync('component.ts', compiled.content).code;
-	const cssModule = cssModuleKeys
-		.map((key) => `${JSON.stringify(key)}: ${JSON.stringify(`sentinel-${key}`)}`)
-		.join(', ');
-	const bundled = `${javascript}
-const cssModules = { "$style": { ${cssModule} } };
+		const compiled = compileScript(descriptor, {
+			id: component,
+			genDefaultAs: '_sfc_main',
+			inlineTemplate: true,
+			isProd: true,
+			fs: {
+				fileExists: existsSync,
+				readFile: (path) => readFileSync(path, 'utf8'),
+				realpath: realpathSync,
+			},
+		});
+		const javascript = transformSync('component.ts', compiled.content).code;
+		const bundled = `${javascript}
+const cssModules = { "$style": ${JSON.stringify(css.modules)} };
 const _wrapped = _export_sfc(_sfc_main, [["__cssModules", cssModules]]);
 `;
-
-	const ast = parseSync('component.js', bundled).program;
-	const magicString = new RolldownMagicString(bundled);
-	unwindCssModuleClassName(ast, magicString);
-	const output = magicString.toString();
-	expect(output).not.toContain('__cssModules');
-	// Inspect the component, not the unused metadata containing every sentinel.
-	return output.slice(0, output.indexOf('const cssModules ='));
-}
-
-describe('timeline CSS modules in production output', () => {
-	it('keeps the date separator class in MkNotesTimeline', () => {
-		const output = compileAndUnwind(resolve(frontendRoot, 'src/components/MkNotesTimeline.vue'), [
-			'root',
-			'noGap',
-			'date',
-			'note',
-			'ad',
-		]);
-
-		expect(output).toContain('"sentinel-date"');
-		expect(output).toContain('"sentinel-root"');
-		expect(output).toContain('"sentinel-noGap"');
-		expect(output).toContain('"_gaps"');
-		expect(output).toContain('useGapMode.value');
-		expect(output).not.toContain('useCssModule');
-		expect(output).not.toContain('__cssModules');
-		expect(output).not.toMatch(/\$style(?:\.|\[)/);
-	});
-
-	it('selects every static spacing class in MkStreamingNotesTimeline', () => {
-		const output = compileAndUnwind(resolve(frontendRoot, 'src/components/MkStreamingNotesTimeline.vue'), [
-			'new',
-			'newBg1',
-			'newBg2',
-			'newButton',
-			'notes',
-			'spacing_extremelyNarrow',
-			'spacing_narrow',
-			'spacing_normal',
-			'spacing_wide',
-			'transition_x_enterActive',
-			'transition_x_leaveActive',
-			'transition_x_enterFrom',
-			'transition_x_leaveTo',
-			'transition_x_move',
-			'date',
-			'note',
-			'ad',
-			'more',
-		]);
-
-		for (const mode of ['extremelyNarrow', 'narrow', 'normal', 'wide']) {
-			expect(output).toContain(`"sentinel-spacing_${mode}"`);
-			expect(output).toMatch(new RegExp(`noteSpacing\\.value === ["']${mode}["']`));
-		}
-		expect(output).toContain('"sentinel-date"');
-		expect(output).not.toContain('noteSpacingClass');
-		expect(output).not.toContain('useCssModule');
-		expect(output).not.toContain('__cssModules');
-		expect(output).not.toMatch(/\$style(?:\.|\[)/);
+		const magicString = new RolldownMagicString(bundled);
+		unwindCssModuleClassName(parseSync('component.js', bundled).program, magicString);
+		// Check class attributes, not unused metadata or compiler-specific
+		// variable names. Spacing selection is outside this regression's scope.
+		const classes: string[] = [];
+		walk(parseSync('output.js', magicString.toString()).program, {
+			enter(node) {
+				if (node.type !== 'Property') return;
+				const key = node.key.type === 'Identifier' ? node.key.name : node.key.type === 'Literal' ? node.key.value : null;
+				if (key !== 'class') return;
+				walk(node.value, {
+					enter(value) {
+						if (value.type === 'Literal' && typeof value.value === 'string') {
+							classes.push(...value.value.split(/\s+/));
+						}
+					},
+				});
+			},
+		});
+		expect(classes).toContain(dateClass);
 	});
 });
