@@ -21,7 +21,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<component
 			:is="prefer.s.animation ? TransitionGroup : 'div'"
-			:class="[$style.notes, $style[noteSpacingClass]]"
+			:class="[$style.notes, {
+				[$style.spacing_extremelyNarrow]: noteSpacing === 'extremelyNarrow',
+				[$style.spacing_narrow]: noteSpacing === 'narrow',
+				[$style.spacing_normal]: noteSpacing === 'normal',
+				[$style.spacing_wide]: noteSpacing === 'wide',
+			}]"
 			:enterActiveClass="$style.transition_x_enterActive"
 			:leaveActiveClass="$style.transition_x_leaveActive"
 			:enterFromClass="$style.transition_x_enterFrom"
@@ -56,7 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, watch, onUnmounted, provide, useTemplateRef, TransitionGroup, onMounted, shallowRef, ref, markRaw, useCssModule } from 'vue';
+import { computed, watch, onUnmounted, provide, useTemplateRef, TransitionGroup, onMounted, shallowRef, ref, markRaw } from 'vue';
 import * as Misskey from 'misskey-js';
 import { useInterval } from '@@/js/use-interval.js';
 import { useDocumentVisibility } from '@@/js/use-document-visibility.js';
@@ -79,13 +84,7 @@ import { globalEvents, useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { Paginator } from '@/utility/paginator.js';
 
-const $style = useCssModule();
-
 const noteSpacing = computed(() => prefer.s.noteSpacing);
-
-const noteSpacingClass = computed(() => {
-	return `spacing_${noteSpacing.value}`;
-});
 
 const props = withDefaults(defineProps<{
 	src: BasicTimelineType | 'mentions' | 'directs' | 'list' | 'antenna' | 'channel' | 'role';

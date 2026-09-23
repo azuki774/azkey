@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #empty><MkResult type="empty" :text="i18n.ts.noNotes"/></template>
 
 	<template #default="{ items: notes }">
-		<div :class="noteContainerClass" :style="noteSpacingStyle">
+		<div :class="[$style.root, { [$style.noGap]: !useGapMode, _gaps: useGapMode }]" :style="noteSpacingStyle">
 			<template v-for="(note, i) in notes" :key="note.id">
 				<div
 					v-if="i > 0 && isSeparatorNeeded(paginator.items.value[i - 1].createdAt, note.createdAt)"
@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup generic="T extends IPaginator<Misskey.entities.Note>">
-import { computed, useCssModule } from 'vue';
+import { computed } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { MkPaginationOptions } from '@/components/MkPagination.vue';
 import type { IPaginator } from '@/utility/paginator.js';
@@ -49,8 +49,6 @@ import { i18n } from '@/i18n.js';
 import { useGlobalEvent } from '@/events.js';
 import { isSeparatorNeeded, getSeparatorInfo } from '@/utility/timeline-date-separate.js';
 import { prefer } from '@/preferences.js';
-
-const $style = useCssModule();
 
 const props = withDefaults(defineProps<MkPaginationOptions & {
 	paginator: T;
@@ -69,14 +67,6 @@ const noteSpacing = computed(() => prefer.s.noteSpacing);
 const useGapMode = computed(() => {
 	if (props.noGap) return false;
 	return noteSpacing.value === 'normal' || noteSpacing.value === 'wide';
-});
-
-const noteContainerClass = computed(() => {
-	if (useGapMode.value) {
-		return [$style.root, '_gaps'];
-	} else {
-		return [$style.root, $style.noGap];
-	}
 });
 
 const noteSpacingStyle = computed(() => {
