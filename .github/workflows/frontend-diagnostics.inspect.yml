@@ -98,7 +98,7 @@ jobs:
 
     steps:
       - name: Checkout base
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           repository: ${{ github.event.pull_request.base.repo.full_name }}
@@ -107,7 +107,7 @@ jobs:
           submodules: true
 
       - name: Checkout head
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -116,7 +116,7 @@ jobs:
           submodules: true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.9
+        uses: pnpm/action-setup@v6.0.10
         with:
           package_json_file: head/package.json
 
