@@ -99,6 +99,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 
 			this.queryService.generateBaseNoteFilteringQuery(query, me);
+			if (me == null) this.queryService.generateUgcVisibilityQueryForVisitor(query);
 
 			if (ps.withFiles) {
 				query.andWhere('note.fileIds != \'{}\'');
