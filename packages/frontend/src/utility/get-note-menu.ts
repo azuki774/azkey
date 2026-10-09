@@ -649,6 +649,7 @@ export function getRenoteMenu(props: {
 
 				void os.apiWithDialog('notes/create', {
 					text: createNyokiruText(appearNote.text!),
+					cw: appearNote.cw ?? null,
 					localOnly,
 					visibility: configuredVisibility,
 				}).then((res) => {
