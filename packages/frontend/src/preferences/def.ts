@@ -479,7 +479,7 @@ export const PREF_DEF = definePreferences({
 		default: false,
 	},
 	'sound.on.note': {
-		default: { type: 'syuilo/n-aec', volume: 1 } as SoundStore,
+		default: { type: null, volume: 1 } as SoundStore,
 	},
 	'sound.on.noteMy': {
 		default: { type: 'syuilo/n-cea-4va', volume: 1 } as SoundStore,
