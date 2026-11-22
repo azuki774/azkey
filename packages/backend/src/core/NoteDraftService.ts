@@ -79,6 +79,10 @@ export class NoteDraftService {
 		}
 		//#endregion
 
+		if (data.visibility === 'specified' && !policies.canDirectNote) {
+			throw new IdentifiableError('ba6901c1-26b7-494f-8071-4293c80a0009', 'Direct notes are not allowed');
+		}
+
 		await this.validate(me, data);
 
 		const draft = await this.noteDraftsRepository.insertOne({
@@ -118,6 +122,10 @@ export class NoteDraftService {
 			}
 		}
 		//#endregion
+
+		if ((data.visibility ?? draft.visibility) === 'specified' && !policies.canDirectNote) {
+			throw new IdentifiableError('ba6901c1-26b7-494f-8071-4293c80a0009', 'Direct notes are not allowed');
+		}
 
 		await this.validate(me, data);
 

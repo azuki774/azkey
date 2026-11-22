@@ -76,6 +76,12 @@ export const meta = {
 			id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
 		},
 
+		cannotSendDirectNote: {
+			message: 'Direct notes are not allowed.',
+			code: 'CANNOT_SEND_DIRECT_NOTE',
+			id: '3e66c014-8d06-4259-922f-36f4b0c28c75',
+		},
+
 		cannotCreateAlreadyExpiredPoll: {
 			message: 'Poll is already expired.',
 			code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
@@ -262,6 +268,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 							throw new ApiError(meta.errors.cannotReplyToInvisibleNote);
 						case '215dbc76-336c-4d2a-9605-95766ba7dab0':
 							throw new ApiError(meta.errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility);
+						case 'ba6901c1-26b7-494f-8071-4293c80a0009':
+							throw new ApiError(meta.errors.cannotSendDirectNote);
 						case 'c3275f19-4558-4c59-83e1-4f684b5fab66':
 							throw new ApiError(meta.errors.tooManyScheduledNotes);
 						case '94a89a43-3591-400a-9c17-dd166e71fdfa':

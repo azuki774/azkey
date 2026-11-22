@@ -470,6 +470,10 @@ export class NoteCreateService implements OnApplicationShutdown {
 		if (data.channel != null) data.visibleUsers = [];
 		if (data.channel != null) data.localOnly = true;
 
+		if (user.host == null && data.visibility === 'specified' && !(await this.roleService.getUserPolicies(user.id)).canDirectNote) {
+			throw new IdentifiableError('ba6901c1-26b7-494f-8071-4293c80a0009', 'Direct notes are not allowed');
+		}
+
 		if (data.visibility === 'public' && data.channel == null) {
 			const sensitiveWords = this.meta.sensitiveWords;
 			const sensitiveWordsTarget = data.cw ?? data.text ?? '';

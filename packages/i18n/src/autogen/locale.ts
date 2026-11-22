@@ -8247,6 +8247,10 @@ export interface Locale extends ILocale {
              */
             "canPublicNote": string;
             /**
+             * ダイレクト投稿を許可
+             */
+            "canDirectNote": string;
+            /**
              * ノート内の最大メンション数
              */
             "mentionMax": string;
