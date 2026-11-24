@@ -22,7 +22,8 @@ export class ApMentionService {
 
 	@bindThis
 	public async extractApMentions(tags: IObject | IObject[] | null | undefined, resolver: Resolver): Promise<MiUser[]> {
-		const hrefs = unique(this.extractApMentionObjects(tags).map(x => x.href));
+		const MAX_MENTION_USERS = 100;
+		const hrefs = unique(this.extractApMentionObjects(tags).map(x => x.href)).slice(0, MAX_MENTION_USERS);
 
 		const limit = promiseLimit<MiUser | null>(2);
 		const mentionedUsers = (await Promise.all(

@@ -235,9 +235,14 @@ export class ApNoteService {
 		}
 
 		// 添付ファイル
+		const MAX_ATTACHMENTS = 16;
+		const attachments = toArray(note.attachment);
+		if (attachments.length > MAX_ATTACHMENTS) {
+			this.logger.warn(`Too many attachments: ${attachments.length} (limit: ${MAX_ATTACHMENTS}), ignoring the rest.`);
+		}
 		const files: MiDriveFile[] = [];
 
-		for (const attach of toArray(note.attachment)) {
+		for (const attach of attachments.slice(0, MAX_ATTACHMENTS)) {
 			attach.sensitive ??= note.sensitive;
 			const file = await this.apImageService.resolveImage(actor, attach);
 			if (file) files.push(file);
@@ -394,7 +399,8 @@ export class ApNoteService {
 		// eslint-disable-next-line no-param-reassign
 		host = this.utilityService.toPuny(host);
 
-		const eomjiTags = toArray(tags).filter(isEmoji);
+		const eomjiTags = toArray(tags).filter(isEmoji)
+			.filter(tag => typeof tag.icon.url === 'string' && checkHttps(tag.icon.url));
 
 		const existingEmojis = await this.emojisRepository.findBy({
 			host,
