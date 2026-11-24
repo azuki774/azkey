@@ -248,6 +248,17 @@ describe('RoleService', () => {
 			expect(result.canManageCustomEmojis).toBe(true);
 		});
 
+		test('instance default canDirectNote', async () => {
+			const user = await createUser();
+			meta.policies = {
+				canDirectNote: false,
+			};
+
+			const result = await roleService.getUserPolicies(user.id);
+
+			expect(result.canDirectNote).toBe(false);
+		});
+
 		test('with role', async () => {
 			const user = await createUser();
 			const role = await createRole({

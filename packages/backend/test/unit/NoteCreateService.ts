@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeAll, describe, test, expect } from 'vitest';
+import { beforeAll, afterEach, describe, test, expect, vi } from 'vitest';
 import { Test } from '@nestjs/testing';
 
 import { CoreModule } from '@/core/CoreModule.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
+import { DEFAULT_POLICIES } from '@/core/RoleService.js';
 import { GlobalModule } from '@/GlobalModule.js';
 import { MiNote } from '@/models/Note.js';
 import { IPoll } from '@/models/Poll.js';
@@ -21,6 +22,30 @@ describe('NoteCreateService', () => {
 			imports: [GlobalModule, CoreModule],
 		}).compile();
 		noteCreateService = app.get<NoteCreateService>(NoteCreateService);
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	describe('create', () => {
+		test('rejects specified visibility when canDirectNote is false', async () => {
+			vi.spyOn(noteCreateService['roleService'], 'getUserPolicies').mockResolvedValue({
+				...DEFAULT_POLICIES,
+				canDirectNote: false,
+			});
+
+			await expect(noteCreateService.create({
+				id: 'some-user-id',
+				username: 'some-user',
+				host: null,
+				isBot: false,
+				isCat: false,
+			}, {
+				text: 'hello',
+				visibility: 'specified',
+			})).rejects.toThrow('Direct notes are not allowed');
+		});
 	});
 
 	describe('is-renote', () => {

@@ -419,6 +419,9 @@ if (props.specified) {
 	pushVisibleUser(props.specified);
 }
 
+// ダイレクト投稿が禁止されていても specified を home に落とさない。
+// 下書きやリプライの宛先を意図せず広い範囲に公開してしまうため、送信時にサーバーが拒否する。
+
 // keep cw when reply
 if (prefer.s.keepCw && replyTargetNote.value && replyTargetNote.value.cw) {
 	useCw.value = true;
@@ -532,6 +535,7 @@ function setVisibility() {
 		currentVisibility: visibility.value,
 		isSilenced: $i.isSilenced,
 		anchorElement: visibilityButton.value,
+		canDirectNote: $i.policies.canDirectNote,
 		...(replyTargetNote.value ? { isReplyVisibilitySpecified: replyTargetNote.value.visibility === 'specified' } : {}),
 	}, {
 		changeVisibility: v => {

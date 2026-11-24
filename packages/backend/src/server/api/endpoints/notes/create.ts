@@ -82,6 +82,12 @@ export const meta = {
 			id: 'ed940410-535c-4d5e-bfa3-af798671e93c',
 		},
 
+		cannotSendDirectNote: {
+			message: 'Direct notes are not allowed.',
+			code: 'CANNOT_SEND_DIRECT_NOTE',
+			id: 'eff4c5ba-fb5e-43b4-a73d-35ad5b924e19',
+		},
+
 		cannotCreateAlreadyExpiredPoll: {
 			message: 'Poll is already expired.',
 			code: 'CANNOT_CREATE_ALREADY_EXPIRED_POLL',
@@ -277,6 +283,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 						throw new ApiError(meta.errors.cannotReplyToInvisibleNote);
 					} else if (err.id === 'ced780a1-2012-4caf-bc7e-a95a291294cb') {
 						throw new ApiError(meta.errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility);
+					} else if (err.id === 'ba6901c1-26b7-494f-8071-4293c80a0009') {
+						throw new ApiError(meta.errors.cannotSendDirectNote);
 					} else if (err.id === 'b0df6025-f2e8-44b4-a26a-17ad99104612') {
 						throw new ApiError(meta.errors.youHaveBeenBlocked);
 					} else if (err.id === '0c11c11e-0c8d-48e7-822c-76ccef660068') {
