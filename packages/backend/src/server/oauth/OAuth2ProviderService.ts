@@ -414,8 +414,8 @@ export class OAuth2ProviderService implements OnApplicationShutdown {
 		private htmlTemplateService: HtmlTemplateService,
 		loggerService: LoggerService,
 	) {
-		this.#authorizationTransactionCache = new MemoryKVCache<AuthorizationTransaction>(1000 * 60 * 5);
-		this.#grantCodeCache = new MemoryKVCache<AuthorizationCodeGrant>(1000 * 60 * 5);
+		this.#authorizationTransactionCache = new MemoryKVCache<AuthorizationTransaction>(1000 * 60 * 5, 1000);
+		this.#grantCodeCache = new MemoryKVCache<AuthorizationCodeGrant>(1000 * 60 * 5, 1000);
 		this.#logger = loggerService.getLogger('oauth');
 	}
 
