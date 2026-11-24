@@ -18,8 +18,10 @@ import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { bindThis } from '@/decorators.js';
 import type Logger from '@/logger.js';
+import { StatusError } from '@/misc/status-error.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
 import { assertActivityMatchesUrl, FetchAllowSoftFailMask as FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
+import type { Response } from 'node-fetch';
 import type { IObject } from './type.js';
 
 type Request = {
@@ -39,6 +41,9 @@ type PrivateKey = {
 	privateKeyPem: string;
 	keyId: string;
 };
+
+const MAX_REDIRECTS = 5;
+const REQUEST_TIMEOUT = 5000;
 
 export class ApRequestCreator {
 	static async createSignedPost(args: { key: PrivateKey, url: string, body: string, digest?: string, additionalHeaders: Record<string, string> }): Promise<Signed> {
@@ -165,23 +170,67 @@ export class ApRequestService {
 
 		const keypair = await this.userKeypairService.getUserKeypair(user.id);
 
-		const req = await ApRequestCreator.createSignedPost({
-			key: {
-				privateKeyPem: keypair.privateKey,
-				keyId: `${this.config.url}/users/${user.id}#main-key`,
-			},
-			url,
-			body,
-			digest,
-			additionalHeaders: {
-			},
-		});
+		let currentUrl = url;
+		let currentMethod: 'POST' | 'GET' = 'POST';
+		const deadline = Date.now() + REQUEST_TIMEOUT;
+		for (let redirectCount = 0; ; redirectCount++) {
+			const req = currentMethod === 'POST'
+				? await ApRequestCreator.createSignedPost({
+					key: {
+						privateKeyPem: keypair.privateKey,
+						keyId: `${this.config.url}/users/${user.id}#main-key`,
+					},
+					url: currentUrl,
+					body,
+					digest,
+					additionalHeaders: {
+					},
+				})
+				: await ApRequestCreator.createSignedGet({
+					key: {
+						privateKeyPem: keypair.privateKey,
+						keyId: `${this.config.url}/users/${user.id}#main-key`,
+					},
+					url: currentUrl,
+					additionalHeaders: {
+					},
+				});
 
-		await this.httpRequestService.send(url, {
-			method: req.request.method,
-			headers: req.request.headers,
-			body,
-		});
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) {
+				throw new Error('request timeout');
+			}
+
+			const res = await this.httpRequestService.send(currentUrl, {
+				method: req.request.method,
+				headers: req.request.headers,
+				...(currentMethod === 'POST' ? { body } : {}),
+				redirect: 'manual',
+				timeout: remaining,
+			}, {
+				throwErrorWhenResponseNotOk: false,
+			});
+
+			if (res.status >= 300 && res.status < 400) {
+				const location = res.headers.get('location');
+				if (location != null) {
+					if (redirectCount >= MAX_REDIRECTS) {
+						throw new Error('too many redirects');
+					}
+					if (res.status === 303) {
+						currentMethod = 'GET';
+					}
+					currentUrl = new URL(location, currentUrl).href;
+					continue;
+				}
+			}
+
+			if (!res.ok) {
+				throw new StatusError(`${res.status} ${res.statusText}`, res.status, res.statusText);
+			}
+
+			return;
+		}
 	}
 
 	/**
@@ -194,22 +243,51 @@ export class ApRequestService {
 		const _followAlternate = followAlternate ?? true;
 		const keypair = await this.userKeypairService.getUserKeypair(user.id);
 
-		const req = await ApRequestCreator.createSignedGet({
-			key: {
-				privateKeyPem: keypair.privateKey,
-				keyId: `${this.config.url}/users/${user.id}#main-key`,
-			},
-			url,
-			additionalHeaders: {
-			},
-		});
+		let currentUrl = url;
+		let res!: Response;
+		const deadline = Date.now() + REQUEST_TIMEOUT;
+		for (let redirectCount = 0; ; redirectCount++) {
+			const req = await ApRequestCreator.createSignedGet({
+				key: {
+					privateKeyPem: keypair.privateKey,
+					keyId: `${this.config.url}/users/${user.id}#main-key`,
+				},
+				url: currentUrl,
+				additionalHeaders: {
+				},
+			});
 
-		const res = await this.httpRequestService.send(url, {
-			method: req.request.method,
-			headers: req.request.headers,
-		}, {
-			throwErrorWhenResponseNotOk: true,
-		});
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) {
+				throw new Error('request timeout');
+			}
+
+			res = await this.httpRequestService.send(currentUrl, {
+				method: req.request.method,
+				headers: req.request.headers,
+				redirect: 'manual',
+				timeout: remaining,
+			}, {
+				throwErrorWhenResponseNotOk: false,
+			});
+
+			if (res.status >= 300 && res.status < 400) {
+				const location = res.headers.get('location');
+				if (location != null) {
+					if (redirectCount >= MAX_REDIRECTS) {
+						throw new Error('too many redirects');
+					}
+					currentUrl = new URL(location, currentUrl).href;
+					continue;
+				}
+			}
+
+			if (!res.ok) {
+				throw new StatusError(`${res.status} ${res.statusText}`, res.status, res.statusText);
+			}
+
+			break;
+		}
 
 		//#region リクエスト先がhtmlかつactivity+jsonへのalternate linkタグがあるとき
 		const contentType = res.headers.get('content-type');
