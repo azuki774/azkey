@@ -502,8 +502,9 @@ export default function pluginUnwindCssModuleClassName(): Plugin {
 		renderChunk(code, _chunk, _options, meta) {
 			const ast = ('ast' in meta ? meta.ast ?? this.parse(code) : this.parse(code)) as ESTree.Program;
 			const magicString = meta.magicString ?? new RolldownMagicString(code);
-			unwindCssModuleClassName(ast, magicString);
-			return magicString;
+			// vite が同梱する rolldown と直接依存の rolldown で型が別物になるため、境界でキャストする
+			unwindCssModuleClassName(ast, magicString as unknown as RolldownMagicString);
+			return magicString as unknown as string;
 		},
 	};
 }
